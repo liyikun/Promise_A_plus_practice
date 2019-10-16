@@ -1,0 +1,22 @@
+{
+  "name": "promise_a_plus_practice",
+  "version": "1.0.0",
+  "description": "promise a+ plus practice",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/liyikun/Promise_A_plus_practice-.git"
+  },
+  "author": "liyk",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/liyikun/Promise_A_plus_practice-/issues"
+  },
+  "homepage": "https://github.com/liyikun/Promise_A_plus_practice-#readme",
+  "dependencies": {
+    "promises-aplus-tests": "^2.1.2"
+  }
+}

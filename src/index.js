@@ -70,7 +70,7 @@ function PromiseA(resolver) {
     this.onRejectedCallback = []
 
 
-    function resolve(value) {
+    let resolve = (value) => {
         this.value = value
         this.state = 'fulfilled'
         this.onFulfilledCallback.forEach((cb) => {
@@ -78,7 +78,7 @@ function PromiseA(resolver) {
         })
     }
 
-    function reject(reason) {
+    let reject = (reason) => {
         this.reason = reason
         this.state = 'rejected'
         this.onRejectedCallback.forEach((cb) => {
@@ -162,6 +162,12 @@ PromiseA.resolve = function(x) {
     })
 }
 
+PromiseA.reject = function(reason) {
+    return new PromiseA((resolve, reject) => {
+        reject(reason)
+    })
+}
+
 
 
 PromiseA.prototype.reject = function(onRejected) {
@@ -170,5 +176,14 @@ PromiseA.prototype.reject = function(onRejected) {
 
 
 module.exports = {
-    
+    resolved: PromiseA.resolve,
+    rejected: PromiseA.reject,
+    deferred: () =>  { 
+        var dfd = {}
+        dfd.promise = new Promise(function(resolve, reject) {
+            dfd.resolve = resolve
+            dfd.reject = reject
+        })
+        return dfd
+    }
 }

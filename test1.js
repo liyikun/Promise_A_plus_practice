@@ -1,12 +1,10 @@
 
 var adapter = require('./src')
 
-const p = adapter.deferred()
-
-// console.log(p.resolved)
-
-console.log(adapter.resolved({}))
-
-// setTimeout(() => {
-//     console.log(p.promise.then(1,1))
-// })
+var promise1 = adapter.resolved({}).then(() => {
+    console.log('1')
+    return promise1
+})
+promise1.then(null, function (reason) {
+    console.log(reason)
+});

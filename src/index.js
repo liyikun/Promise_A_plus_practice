@@ -24,45 +24,38 @@ function isNull(instance) {
     return instance === null
 }
 
-const pending = Symbol('pending')
-const fulfilled = Symbol('fulfilled')
-const rejected = Symbol('rejected')
-
 function resolvePromise(promise, x, resolve, reject) {
+    let thenCalledOrThrow = false
+
     if (promise === x) {
         return reject(new TypeError("promise and x not refer to the same object"))
-    }
-
-    if (x instanceof PromiseA) {
-        if (x.status === 'pending') {
-            x.then((value) => {
-                resolvePromise(promise, value, resolve, reject)
-            }, reject)
-        } else {
-            x.then(resolve, reject)
-        }
-
-        return
     }
 
     if (!isNull(x) && (isObject(x) || isFunction(x))) {
         try {
             let then = x.then
+
             if (isFunction(then)) {
                 try {
                     then.call(x, function (y) {
-
+                        if (thenCalledOrThrow) return
+                        thenCalledOrThrow = true
                         resolvePromise(promise, y, resolve, reject)
                     }, function (r) {
+                        if (thenCalledOrThrow) return
+                        thenCalledOrThrow = true
                         reject(r)
                     })
+
                 } catch (e) {
+                    if (thenCalledOrThrow) return
+                    thenCalledOrThrow = true
                     reject(e)
                 }
+
             } else {
                 resolve(x)
             }
-
 
         } catch (e) {
             reject(e)
@@ -78,6 +71,7 @@ function PromiseA(resolver) {
     if (!Object.prototype.toString.call(resolver)) {
         throw new Error('Promise resolver  is not a function')
     }
+    
     this.status = 'pending'
     this.value = undefined
     this.reason = undefined
@@ -88,17 +82,23 @@ function PromiseA(resolver) {
     let resolve = (value) => {
         this.value = value
         this.status = 'fulfilled'
-        this.onFulfilledCallback.forEach((cb) => {
-            cb(value)
+        process.nextTick(() => {
+            this.onFulfilledCallback.forEach((cb) => {
+                cb(value)
+            })
         })
     }
 
     let reject = (reason) => {
+
         this.reason = reason
         this.status = 'rejected'
-        this.onRejectedCallback.forEach((cb) => {
-            cb(reason)
+        process.nextTick(() => {
+            this.onRejectedCallback.forEach((cb) => {
+                cb(reason)
+            })
         })
+
     }
 
     try {
@@ -113,30 +113,28 @@ PromiseA.prototype.then = function (onFulfilled, onRejected) {
     if (!isFunction(onFulfilled)) onFulfilled = v => v
 
     if (!isFunction(onRejected)) onRejected = r => { throw r }
-
+    let self = this
     let status = this.status
 
     if (status === 'fulfilled') {
-        return promise2 = new PromiseA((resolve, reject) => {
-            setTimeout(() => {
+        var promise2 = new PromiseA(function(resolve, reject) {
+            process.nextTick(function() {
                 try {
-                    let x = onFulfilled(this.value)
-
+                    let x = onFulfilled(self.value)
                     resolvePromise(promise2, x, resolve, reject)
                 } catch (e) {
-
                     reject(e)
                 }
             })
         })
+        return promise2
     }
 
     if (status === 'rejected') {
-        return promise2 = new PromiseA((resolve, reject) => {
-            setTimeout(() => {
+        var promise2 = new PromiseA(function(resolve, reject) {
+            process.nextTick(function() {
                 try {
-                    let x = onRejected(this.reason)
-
+                    let x = onRejected(self.reason)
                     resolvePromise(promise2, x, resolve, reject)
                 } catch (e) {
 
@@ -144,13 +142,13 @@ PromiseA.prototype.then = function (onFulfilled, onRejected) {
                 }
             })
         })
+        return promise2
     }
 
     if (status === 'pending') {
 
-        return promise2 = new PromiseA((resolve, reject) => {
-
-            this.onFulfilledCallback.push((value) => {
+        var promise2 = new PromiseA(function(resolve, reject) {
+            self.onFulfilledCallback.push((value) => {
                 try {
                     let x = onFulfilled(value)
 
@@ -160,7 +158,7 @@ PromiseA.prototype.then = function (onFulfilled, onRejected) {
                 }
             })
 
-            this.onRejectedCallback.push((reason) => {
+            self.onRejectedCallback.push((reason) => {
                 try {
                     let x = onRejected(reason)
 
@@ -170,30 +168,28 @@ PromiseA.prototype.then = function (onFulfilled, onRejected) {
                 }
             })
         })
+        return promise2
     }
 }
 
 PromiseA.resolve = function (x) {
-    var promise2 = new PromiseA((resolve, reject) => {
-        setTimeout(() => {
-            resolvePromise(promise2, x, resolve, reject)
+    var promise = new PromiseA(function(resolve, reject) {
+        process.nextTick(() => {
+            resolvePromise(promise, x, resolve, reject)
         })
     })
-    return promise2
+    return promise
 }
 
 PromiseA.reject = function (reason) {
-    return new PromiseA((resolve, reject) => {
+    return new PromiseA(function(resolve, reject) {
         reject(reason)
     })
 }
 
-
-
 PromiseA.prototype.reject = function (onRejected) {
     return this.then(undefined, onRejected)
 }
-
 
 module.exports = {
     resolved: PromiseA.resolve,
